@@ -10,12 +10,14 @@ import com.gp.solutions.test.repository.AmenityRepository;
 import com.gp.solutions.test.repository.HotelRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class HotelCommandService {
 
     private final HotelRepository hotelRepository;
@@ -25,14 +27,31 @@ public class HotelCommandService {
     @Transactional
     @CacheEvict(value = "histograms", allEntries = true)
     public HotelShortDto createHotel(HotelCreateDto dto) {
+        log.atInfo()
+            .setMessage("Creating a new hotel record")
+            .addKeyValue("hotelName", dto.name())
+            .addKeyValue("brand", dto.brand())
+            .log();
+
         Hotel hotel = hotelMapper.toEntity(dto);
         Hotel savedHotel = hotelRepository.save(hotel);
+
+        log.atInfo()
+            .setMessage("Hotel successfully saved to database")
+            .addKeyValue("hotelId", savedHotel.getId())
+            .log();
+
         return hotelMapper.toShortDto(savedHotel);
     }
 
     @Transactional
     @CacheEvict(value = {"hotels", "histograms"}, allEntries = true)
     public void addAmenities(Long id, List<String> amenityNames) {
+        log.atInfo()
+            .setMessage("Updating amenities for hotel")
+            .addKeyValue("hotelId", id)
+            .log();
+
         Hotel hotel = hotelRepository.findById(id)
             .orElseThrow(() -> new HotelNotFoundException("Hotel not found"));
 
@@ -42,9 +61,21 @@ public class HotelCommandService {
             .distinct()
             .toList();
 
+        log.atDebug()
+            .setMessage("Filtered unique amenity names from request")
+            .addKeyValue("inputCount", amenityNames.size())
+            .addKeyValue("uniqueCount", uniqueInputNames.size())
+            .log();
+
         for (String name : uniqueInputNames) {
             Amenity amenity = amenityRepository.findByName(name)
-                .orElseGet(() -> amenityRepository.save(new Amenity(name)));
+                .orElseGet(() -> {
+                    log.atDebug()
+                        .setMessage("Creating new amenity type in database")
+                        .addKeyValue("amenityName", name)
+                        .log();
+                    return amenityRepository.save(new Amenity(name));
+                });
 
             boolean alreadyHas = hotel.getAmenities().stream()
                 .anyMatch(existing -> existing.getId().equals(amenity.getId()));
@@ -52,6 +83,11 @@ public class HotelCommandService {
             if (!alreadyHas) {
                 hotel.getAmenities().add(amenity);
             }
+
+            log.atInfo()
+                .setMessage("Amenities link process completed")
+                .addKeyValue("hotelId", id)
+                .log();
         }
     }
 }
