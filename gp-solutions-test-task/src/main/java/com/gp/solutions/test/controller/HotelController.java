@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,8 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@Tag(name = "GP Solutions. Hotel API", description = " RESTful API для работы с отелями")
 @Slf4j
+@Tag(name = "GP Solutions. Hotel API", description = " RESTful API для работы с отелями")
 public class HotelController {
 
     private final HotelQueryService queryService;
@@ -34,12 +33,15 @@ public class HotelController {
 
     @GetMapping("/hotels")
     @Operation(summary = "получение списка всех отелей с их краткой информацией")
-    public Page<HotelShortDto> getAllHotels(Pageable pageable) {
+    // если бы я возвращал Page, то там были бы еще метаданные, которые не соответствуют требованию из ТЗ
+    // либо эту информацию можно передавать в заголовке
+    public List<HotelShortDto> getAllHotels(Pageable pageable) {
         log.atInfo()
-            .setMessage("Fetching all hotels with pagination")
+            .setMessage("Fetching all hotels")
             .addKeyValue("pageNumber", pageable.getPageNumber())
             .addKeyValue("pageSize", pageable.getPageSize())
             .log();
+
         return queryService.getAllHotels(pageable);
     }
 
@@ -50,6 +52,7 @@ public class HotelController {
             .setMessage("Fetching detailed information for a specific hotel")
             .addKeyValue("hotelId", id)
             .log();
+
         return queryService.getHotelById(id);
     }
 
@@ -61,6 +64,7 @@ public class HotelController {
             .addKeyValue("hotelName", dto.name())
             .addKeyValue("brand", dto.brand())
             .log();
+
         return commandService.createHotel(dto);
     }
 
@@ -72,12 +76,13 @@ public class HotelController {
             .addKeyValue("hotelId", id)
             .addKeyValue("amenitiesCount", amenities.size())
             .log();
+
         commandService.addAmenities(id, amenities);
     }
 
     @GetMapping("/search")
     @Operation(summary = "поиск получение списка всех отелей с их краткой информацией по следующим параметрам: name, brand, city, country, amenities")
-    public Page<HotelShortDto> searchHotels(
+    public List<HotelShortDto> searchHotels(
         @RequestParam(required = false) String name,
         @RequestParam(required = false) String brand,
         @RequestParam(required = false) String city,
@@ -92,6 +97,7 @@ public class HotelController {
             .addKeyValue("countryFilter", country)
             .addKeyValue("amenityFilter", amenities)
             .log();
+
         return queryService.searchHotels(name, brand, city, country, amenities, pageable);
     }
 
@@ -102,6 +108,7 @@ public class HotelController {
             .setMessage("Making hotel distribution histogram")
             .addKeyValue("groupByParameter", param)
             .log();
+
         return aggregationService.getHistogram(param);
     }
 }

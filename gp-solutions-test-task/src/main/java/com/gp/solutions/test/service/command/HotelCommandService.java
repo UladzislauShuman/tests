@@ -9,6 +9,8 @@ import com.gp.solutions.test.mapper.HotelMapper;
 import com.gp.solutions.test.repository.AmenityRepository;
 import com.gp.solutions.test.repository.HotelRepository;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -57,37 +59,46 @@ public class HotelCommandService {
 
         List<String> uniqueInputNames = amenityNames.stream()
             .filter(name -> name != null && !name.isBlank())
+            .map(String::trim)
             .map(String::toLowerCase)
             .distinct()
             .toList();
 
-        log.atDebug()
-            .setMessage("Filtered unique amenity names from request")
-            .addKeyValue("inputCount", amenityNames.size())
-            .addKeyValue("uniqueCount", uniqueInputNames.size())
-            .log();
-
-        for (String name : uniqueInputNames) {
-            Amenity amenity = amenityRepository.findByName(name)
-                .orElseGet(() -> {
-                    log.atDebug()
-                        .setMessage("Creating new amenity type in database")
-                        .addKeyValue("amenityName", name)
-                        .log();
-                    return amenityRepository.save(new Amenity(name));
-                });
-
-            boolean alreadyHas = hotel.getAmenities().stream()
-                .anyMatch(existing -> existing.getId().equals(amenity.getId()));
-
-            if (!alreadyHas) {
-                hotel.getAmenities().add(amenity);
-            }
-
-            log.atInfo()
-                .setMessage("Amenities link process completed")
-                .addKeyValue("hotelId", id)
-                .log();
+        if (uniqueInputNames.isEmpty()) {
+            return;
         }
+
+        List<Amenity> existingAmenities = amenityRepository.findByNameIn(uniqueInputNames);
+        Set<String> existingNames = existingAmenities.stream()
+            .map(Amenity::getName)
+            .collect(Collectors.toSet());
+
+        List<Amenity> newAmenities = uniqueInputNames.stream()
+            .filter(name -> !existingNames.contains(name))
+            .map(Amenity::new)
+            .toList();
+
+        if (!newAmenities.isEmpty()) {
+            log.atDebug()
+                .setMessage("Saving new amenities to DB")
+                .addKeyValue("newAmenitiesCount", newAmenities.size())
+                .log();
+            existingAmenities.addAll(amenityRepository.saveAll(newAmenities));
+        }
+
+        Set<Long> currentAmenityIds = hotel.getAmenities().stream()
+            .map(Amenity::getId)
+            .collect(Collectors.toSet());
+
+        long addedCount = existingAmenities.stream()
+            .filter(amenity -> !currentAmenityIds.contains(amenity.getId()))
+            .peek(hotel.getAmenities()::add)
+            .count();
+
+        log.atInfo()
+            .setMessage("Amenities link process completed")
+            .addKeyValue("hotelId", id)
+            .addKeyValue("newlyLinkedCount", addedCount)
+            .log();
     }
 }

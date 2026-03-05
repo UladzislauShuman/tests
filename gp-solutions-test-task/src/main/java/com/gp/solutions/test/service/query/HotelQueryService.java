@@ -7,6 +7,7 @@ import com.gp.solutions.test.exception.HotelNotFoundException;
 import com.gp.solutions.test.mapper.HotelMapper;
 import com.gp.solutions.test.repository.HotelRepository;
 import com.gp.solutions.test.specification.HotelSpecificationBuilder;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -25,13 +26,16 @@ public class HotelQueryService {
     private final HotelRepository hotelRepository;
     private final HotelMapper hotelMapper;
 
-    public Page<HotelShortDto> getAllHotels(Pageable pageable) {
+    public List<HotelShortDto> getAllHotels(Pageable pageable) {
         log.atInfo()
-            .setMessage("Retrieving paginated list of all hotels")
+            .setMessage("Retrieving list of all hotels")
             .addKeyValue("page", pageable.getPageNumber())
             .addKeyValue("size", pageable.getPageSize())
             .log();
-        return hotelRepository.findAll(pageable).map(hotelMapper::toShortDto);
+
+        return hotelRepository.findAll(pageable)
+            .map(hotelMapper::toShortDto)
+            .getContent();
     }
 
     @Cacheable(value = "hotels", key = "#id")
@@ -52,8 +56,17 @@ public class HotelQueryService {
             });
     }
 
-    public Page<HotelShortDto> searchHotels(String name, String brand, String city, String country,
+    public List<HotelShortDto> searchHotels(String name, String brand, String city, String country,
         String amenity, Pageable pageable) {
+        log.atInfo()
+            .setMessage("Executing hotel search with filters")
+            .addKeyValue("name", name)
+            .addKeyValue("brand", brand)
+            .addKeyValue("city", city)
+            .addKeyValue("country", country)
+            .addKeyValue("amenity", amenity)
+            .log();
+
         Specification<Hotel> spec = HotelSpecificationBuilder.buildSearchSpec(name, brand, city,
             country, amenity);
 
@@ -61,8 +74,8 @@ public class HotelQueryService {
 
         log.atDebug()
             .setMessage("Search completed")
-            .addKeyValue("resultsFound", result.getTotalElements())
             .log();
-        return result.map(hotelMapper::toShortDto);
+
+        return result.map(hotelMapper::toShortDto).getContent();
     }
 }
