@@ -31,15 +31,27 @@ public class HotelCommandService {
     }
 
     @Transactional
+    @CacheEvict(value = {"hotels", "histograms"}, allEntries = true)
     public void addAmenities(Long id, List<String> amenityNames) {
         Hotel hotel = hotelRepository.findById(id)
             .orElseThrow(() -> new HotelNotFoundException("Hotel not found"));
 
-        List<Amenity> amenities = amenityNames.stream()
-            .map(name -> amenityRepository.findByName(name.toLowerCase())
-                .orElseGet(() -> amenityRepository.save(new Amenity(name.toLowerCase()))))
+        List<String> uniqueInputNames = amenityNames.stream()
+            .filter(name -> name != null && !name.isBlank())
+            .map(String::toLowerCase)
+            .distinct()
             .toList();
 
-        hotel.getAmenities().addAll(amenities);
+        for (String name : uniqueInputNames) {
+            Amenity amenity = amenityRepository.findByName(name)
+                .orElseGet(() -> amenityRepository.save(new Amenity(name)));
+
+            boolean alreadyHas = hotel.getAmenities().stream()
+                .anyMatch(existing -> existing.getId().equals(amenity.getId()));
+
+            if (!alreadyHas) {
+                hotel.getAmenities().add(amenity);
+            }
+        }
     }
 }
