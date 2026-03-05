@@ -1,0 +1,32 @@
+databaseChangeLog:
+    - changeSet:
+          id: 2
+          author: vlad
+          changes:
+              - createIndex:
+                    tableName: hotel
+                    indexName: idx_hotel_name
+                    columns:
+                        - column: { name: name }
+              - createIndex:
+                    tableName: hotel
+                    indexName: idx_hotel_brand
+                    columns:
+                        - column: { name: brand }
+              - createIndex:
+                    tableName: hotel
+                    indexName: idx_hotel_city
+                    columns:
+                        - column: { name: city }
+
+              - createIndex:
+                    tableName: hotel_amenities
+                    indexName: idx_hotel_amenity_id
+                    columns:
+                        - column: { name: amenity_id }
+
+              - createIndex:
+                    tableName: amenity
+                    indexName: idx_amenity_name
+                    columns:
+                        - column: { name: name }

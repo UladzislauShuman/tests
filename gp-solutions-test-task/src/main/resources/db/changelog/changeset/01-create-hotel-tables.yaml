@@ -1,0 +1,86 @@
+databaseChangeLog:
+    - changeSet:
+          id: 1
+          author: vlad
+          changes:
+              - createTable:
+                    tableName: hotel
+                    columns:
+                        - column:
+                              name: id
+                              type: bigint
+                              autoIncrement: true
+                              constraints:
+                                  primaryKey: true
+                        - column:
+                              name: name
+                              type: varchar(255)
+                        - column:
+                              name: description
+                              type: varchar(1000)
+                        - column:
+                              name: brand
+                              type: varchar(255)
+                        - column:
+                              name: house_number
+                              type: int
+                        - column:
+                              name: street
+                              type: varchar(255)
+                        - column:
+                              name: city
+                              type: varchar(255)
+                        - column:
+                              name: country
+                              type: varchar(255)
+                        - column:
+                              name: post_code
+                              type: varchar(255)
+                        - column:
+                              name: phone
+                              type: varchar(255)
+                        - column:
+                              name: email
+                              type: varchar(255)
+                        - column:
+                              name: check_in
+                              type: time
+                        - column:
+                              name: check_out
+                              type: time
+
+              -   createTable:
+                      tableName: amenity
+                      columns:
+                          -   column:
+                                  name: id
+                                  type: bigint
+                                  autoIncrement: true
+                                  constraints:
+                                      primaryKey: true
+                          -   column:
+                                  name: name
+                                  type: varchar(255)
+                                  constraints:
+                                      unique: true
+                                      nullable: false
+
+              -   createTable:
+                      tableName: hotel_amenities
+                      columns:
+                          -   column:
+                                  name: hotel_id
+                                  type: bigint
+                                  constraints:
+                                      nullable: false
+                                      primaryKey: true
+                                      foreignKeyName: fk_hotel_amenities_hotel
+                                      references: hotel(id)
+                          -   column:
+                                  name: amenity_id
+                                  type: bigint
+                                  constraints:
+                                      nullable: false
+                                      primaryKey: true
+                                      foreignKeyName: fk_hotel_amenities_amenity
+                                      references: amenity(id)
