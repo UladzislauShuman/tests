@@ -8,5 +8,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AmenityRepository extends JpaRepository<Amenity, Long> {
+
     List<Amenity> findByNameIn(Collection<String> names);
 }
